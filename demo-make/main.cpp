@@ -58,7 +58,7 @@ make_your_decision( const Snake &snake_to_operate, const Context &ctx )
 		}
 
 		//回头撞自己
-		if ( snake_to_operate.length() > 2 &&
+		if ( ( snake_to_operate.length() > 2 || ( snake_to_operate.length() == 2 && snake_to_operate.length_bank > 0 ) ) &&
 			 snake_to_operate[1].x == t_x &&
 			 snake_to_operate[1].y == t_y )
 		{
@@ -73,7 +73,6 @@ make_your_decision( const Snake &snake_to_operate, const Context &ctx )
 			continue;
 		}
 	}
-
 	//玩家操控的首条蛇朝向道具移动
 	if ( snake_to_operate == ctx.my_snakes()[0] )
 	{
@@ -150,12 +149,17 @@ make_your_decision( const Snake &snake_to_operate, const Context &ctx )
 	}
 	for ( int dir = 0; dir < 4; dir++ )
 	{
-		if ( move[dir] == -1 )
+		if ( move[dir] == 1 )
 		{
 			return direction[dir];
 		}
 	}
-	return OP_RIGHT;
+	if ( ( snake_to_operate.length() > 2 || ( snake_to_operate.length() == 2 && snake_to_operate.length_bank > 0 ) ) &&
+		snake_to_operate[1].x == snake_to_operate[0].x + dx[0] &&
+		snake_to_operate[1].y == snake_to_operate[0].y + dy[0] ) 
+		return OP_LEFT;
+	else
+		return OP_RIGHT;
 }
 
 void game_over( int gameover_type, int winner, int p0_score, int p1_score )
