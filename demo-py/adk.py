@@ -34,17 +34,14 @@ class Item:
     param: int
     gotten_time: int
 
-    item_num = 0
-
-    def __init__(self, x: int, y: int, time: int, type: int, param: int):
+    def __init__(self, x: int, y: int, time: int, type: int, param: int, id: int):
         self.x = x
         self.y = y
         self.time = time
         self.type = type
         self.param = param
-        self.id = Item.item_num
+        self.id = id
         self.gotten_time = -1
-        Item.item_num += 1
 
 
 @dataclass(init=False)
@@ -69,18 +66,12 @@ class Snake:
     camp: int
     id: int
 
-    snake_num = 0
-
-    def __init__(self, coor_list: List[Tuple[int, int]], item_list: List[Item], camp: int, id=-1):
+    def __init__(self, coor_list: List[Tuple[int, int]], item_list: List[Item], camp: int, id: int):
         self.coor_list = coor_list.copy()
         self.item_list = item_list.copy()
         self.length_bank = 0
         self.camp = camp
-        if id == -1:
-            self.id = Snake.snake_num
-            Snake.snake_num += 1
-        else:
-            self.id = id
+        self.id = id
 
     def get_len(self) -> int:
         return len(self.coor_list)
@@ -175,8 +166,8 @@ class Context:
 
     def __init__(self, config: GameConfig):
         self.snake_list = [
-            Snake([(0, config.width - 1)], [], 0, -1),
-            Snake([(config.length - 1, 0)], [], 1, -1)
+            Snake([(0, config.width - 1)], [], 0, 0),
+            Snake([(config.length - 1, 0)], [], 1, 1)
         ]
         self.game_map = Map([], config)
         self.turn = 1
@@ -207,6 +198,8 @@ class Context:
                 self.snake_list.remove(_snake)
                 return
 
+    def get_player_snake(self, camp: int):
+        return [snake for snake in self.snake_list if snake.camp == camp]
 
 class Graph:
     dx = [1, 0, -1, 0]
@@ -277,6 +270,7 @@ class Controller:
         self.player = 0
         self.next_snake = -1
         self.current_snake_list = []
+        self.snake_num = 2
 
     def round_preprocess(self):
         tmp_item_list = self.map.item_list.copy()
@@ -422,7 +416,8 @@ class Controller:
 
     def split(self, idx_in_ctx: int):
         def generate(pos, its, player, length_bank, index) -> int:
-            ret = Snake(pos, its, player, -1)
+            ret = Snake(pos, its, player, self.snake_num)
+            self.snake_num += 1
             ret.length_bank = length_bank
             self.ctx.add_snake(ret, index)
             return ret.id
@@ -490,10 +485,6 @@ class Client:
     # 1 Item List
     # 2 Operations
     __state = 0
-    __buf = []
-    __int_buf = [0, 0]
-    __my_player = 0
-    __current_player = 0
     __client = None
     __local = False
 
@@ -526,7 +517,6 @@ class Client:
             res = []
             for i in range(4):
                 res.append(self.__from_B()) if i != 2 else res.append(self.__from_I())
-            self.__my_player = res[3]
             self.__state = 1
             return res
         elif self.__state == 1:
@@ -534,7 +524,7 @@ class Client:
             len = self.__from_I()
             res = []
             for i in range(len):
-                res.append(Item(x=self.__from_B(), y=self.__from_B(), type=self.__from_B(), time=self.__from_I(), param=self.__from_I()))
+                res.append(Item(x=self.__from_B(), y=self.__from_B(), type=self.__from_B(), time=self.__from_I(), param=self.__from_I(), id=i))
             logging.debug("Item list loaded. Total count %d.", len)
             self.__state = 2
             return res
