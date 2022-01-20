@@ -311,6 +311,8 @@ public:
 
 	const std::vector<Snake>& my_snakes() const;
 	std::vector<Snake>& my_snakes();
+	const std::vector<int>& tmp_my_snakes() const;
+	std::vector<int>& tmp_my_snakes();
 	const std::vector<Snake>& opponents_snakes() const;
 	std::vector<Snake>& opponents_snakes();
 
@@ -336,6 +338,8 @@ private:
 
 	PROPERTY( std::vector<Snake>, snake_list_0 );
 	PROPERTY( std::vector<Snake>, snake_list_1 );
+	PROPERTY( std::vector<int>, tmp_list_0 );
+	PROPERTY( std::vector<int>, tmp_list_1 );
 	int _current_snake_id, _next_snake_id;
 	std::vector<int> _new_snakes;
 	std::vector<int> _remove_snakes;
@@ -361,7 +365,7 @@ inline Context::Context( int length, int width, int max_round, std::vector<Item>
 	  _current_player( 1 ), _wall_map { static_cast<size_t>( length ), static_cast<size_t>( width ), -1 },
 	  _snake_map { static_cast<size_t>( length ), static_cast<size_t>( width ), -1 },
 	  _item_map { static_cast<size_t>( length ), static_cast<size_t>( width ), -1 },
-	  _item_list( item_list ), _snake_list_0 {}, _snake_list_1 {}, _current_snake_id( 0 ),
+	  _item_list( item_list ), _snake_list_0 {}, _snake_list_1 {}, _tmp_list_0 {}, _tmp_list_1 {}, _current_snake_id( 0 ),
 	  _next_snake_id( 2 ), _new_snakes {}, _remove_snakes {}, _operation_history {}
 {
 	Snake s = { { { 0, width - 1 } }, 0, 0, 0, NOT_A_ITEM };
@@ -382,6 +386,13 @@ inline const std::vector<Snake>& Context::my_snakes() const
 }
 
 inline std::vector<Snake>& Context::my_snakes() { return _current_player == 0 ? _snake_list_0 : _snake_list_1; }
+
+inline const std::vector<int>& Context::tmp_my_snakes() const
+{
+    return _current_player == 0 ? _tmp_list_0 : _tmp_list_1;
+}
+
+inline std::vector<int>& Context::tmp_my_snakes() { return _current_player == 0 ? _tmp_list_0 : _tmp_list_1; }
 
 inline const std::vector<Snake>& Context::opponents_snakes() const
 {
@@ -504,7 +515,6 @@ inline bool Context::move_snake( const Operation& op )
 	else if ( sealed )
 	{
 		seal_region();
-		remove_snake( snake.id );
 	}
 	else
 	{
@@ -542,10 +552,8 @@ inline void Context::remove_snake( int snake_id )
 			{
 				_snake_map[c.x][c.y] = -1;
 			}
-			if ( _current_player == 0 )
-				_remove_snakes.push_back( snake_id );
-			else
-				_snake_list_0.erase( it );
+			_remove_snakes.push_back( snake_id );
+			_snake_list_0.erase( it );
 			return;
 		}
 	}
@@ -557,10 +565,8 @@ inline void Context::remove_snake( int snake_id )
 			{
 				_snake_map[c.x][c.y] = -1;
 			}
-			if ( _current_player == 1 )
-				_remove_snakes.push_back( snake_id );
-			else
-				_snake_list_1.erase( it );
+			_remove_snakes.push_back( snake_id );
+			_snake_list_1.erase( it );
 			return;
 		}
 	}
@@ -719,9 +725,9 @@ inline bool Context::split_snake()
 inline bool Context::find_next_snake()
 {
 	bool flag = false;
-	for ( const auto& s : my_snakes() )
+	for ( const auto& s : tmp_my_snakes() )
 	{
-		if ( s.id == _current_snake_id )
+		if ( s == _current_snake_id )
 		{
 			flag = true;
 			continue;
@@ -729,46 +735,24 @@ inline bool Context::find_next_snake()
 		if ( flag )
 		{
 			bool invalid = false;
-			for ( int ns : _new_snakes )
-			{
-				if ( s.id == ns )
-				{
-					invalid = true;
-				}
-			}
 			for ( int ns : _remove_snakes )
 			{
-				if ( s.id == ns )
+				if ( s == ns )
 				{
 					invalid = true;
+					break;
 				}
 			}
 			if ( invalid )
 				continue;
-			_current_snake_id = s.id;
+			_current_snake_id = s;
 			return false;
 		}
 	}
 	if ( opponents_snakes().empty() )
 	{
 		if ( !my_snakes().empty() )
-		{
-			for ( const auto& s : my_snakes() )
-			{
-				bool invalid = false;
-				for ( int ns : _remove_snakes )
-				{
-					if ( s.id == ns )
-					{
-						invalid = true;
-					}
-				}
-				if ( invalid )
-					continue;
-				_current_snake_id = s.id;
-				break;
-			}
-		}
+		    _current_snake_id = my_snakes()[0].id;
 	}
 	else
 	{
@@ -779,17 +763,6 @@ inline bool Context::find_next_snake()
 
 inline bool Context::round_preprocess()
 {
-	for ( const auto& s : my_snakes() )
-	{
-		for ( int ns : _remove_snakes )
-		{
-			if ( s.id == ns )
-			{
-				my_snakes().erase( std::find( my_snakes().begin(), my_snakes().end(), s ) );
-				break;
-			}
-		}
-	}
 	_remove_snakes.clear();
 
 	if ( _snake_list_0.empty() && _snake_list_1.empty() )
@@ -856,6 +829,14 @@ inline bool Context::round_preprocess()
 			}
 		}
 	}
+
+	_tmp_list_0.clear();
+	for ( const auto& s : _snake_list_0 )
+	    _tmp_list_0.push_back(s.id);
+
+	_tmp_list_1.clear();
+	for ( const auto& s : _snake_list_1 )
+	    _tmp_list_1.push_back(s.id);
 
 	if ( my_snakes().empty() )
 		_current_player = 1 - _current_player;
