@@ -319,6 +319,8 @@ public:
 	const Snake& find_snake( int snake_id ) const;
 	Snake& find_snake( int snake_id );
 
+	const std::vector<std::vector<Operation>>& operation_history() const;
+
 private:
 	PROPERTY( int, length );
 	PROPERTY( int, width );
@@ -337,6 +339,7 @@ private:
 	int _current_snake_id, _next_snake_id;
 	std::vector<int> _new_snakes;
 	std::vector<int> _remove_snakes;
+	std::vector<std::vector<Operation>> _operation_history;
 
 	// Helper functions
 	Snake& current_snake();
@@ -359,7 +362,7 @@ inline Context::Context( int length, int width, int max_round, std::vector<Item>
 	  _snake_map { static_cast<size_t>( length ), static_cast<size_t>( width ), -1 },
 	  _item_map { static_cast<size_t>( length ), static_cast<size_t>( width ), -1 },
 	  _item_list( item_list ), _snake_list_0 {}, _snake_list_1 {}, _current_snake_id( 0 ),
-	  _next_snake_id( 2 ), _new_snakes {}, _remove_snakes {}
+	  _next_snake_id( 2 ), _new_snakes {}, _remove_snakes {}, _operation_history {}
 {
 	Snake s = { { { 0, width - 1 } }, 0, 0, 0, NOT_A_ITEM };
 	_snake_list_0.push_back( s );
@@ -411,8 +414,17 @@ inline Snake& Context::find_snake( int snake_id )
 						  [=]( const Snake& other ) { return other.id == snake_id; } );
 }
 
+inline const std::vector<std::vector<Operation>>& Context::operation_history() const { return _operation_history; }
+
 inline bool Context::do_operation( const Operation& op )
 {
+	int op_history_idx = 2 * ( _current_round - 1 ) + _current_player;
+	if ( _operation_history.size() == op_history_idx )
+	{
+		_operation_history.emplace_back();
+	}
+	_operation_history[op_history_idx].push_back( op );
+
 	if ( op.type == 5 )
 	{
 		if ( !fire_railgun() )
