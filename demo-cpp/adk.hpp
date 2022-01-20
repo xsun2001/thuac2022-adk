@@ -419,7 +419,7 @@ inline const std::vector<std::vector<Operation>>& Context::operation_history() c
 inline bool Context::do_operation( const Operation& op )
 {
 	int op_history_idx = 2 * ( _current_round - 1 ) + _current_player;
-	if ( _operation_history.size() == op_history_idx )
+	while ( _operation_history.size() <= op_history_idx )
 	{
 		_operation_history.emplace_back();
 	}
@@ -888,7 +888,7 @@ private:
 	int read_short();
 	int read_int();
 	std::vector<Item> read_item_list();
-	void handle_gameover();
+	[[noreturn]] void handle_gameover();
 
 	void crash();
 };
@@ -1009,8 +1009,10 @@ inline void SnakeGoAI::handle_gameover()
 	static char dummy[] = { 0, 0, 0, 1, 1 };
 	int gameover_type = read_short(), winner = read_short(), p0_score = read_int(), p1_score = read_int();
 	game_over( gameover_type, winner, p0_score, p1_score );
-	ch->send( dummy, 5 ); // wait for connection broke
-	::exit( 0 );
+
+	for ( ;; )
+	{
+	}
 }
 
 inline void SnakeGoAI::crash() { ::exit( -1 ); }
