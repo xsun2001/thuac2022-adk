@@ -248,9 +248,10 @@ private:
 struct Item
 {
 	int x, y, id, time, type, param;
+	bool eaten, expired;
 };
 
-const Item NOT_A_ITEM { 0, 0, -1, 0, 0, 0 };
+const Item NOT_A_ITEM { 0, 0, -1, 0, 0, 0, false, false };
 
 struct Coord
 {
@@ -307,7 +308,6 @@ public:
 
 	Context( int length, int width, int max_round, std::vector<Item>&& item_list );
 	bool do_operation( const Operation& op );
-	// bool try_operation(const Operation &op) const;
 
 	const std::vector<Snake>& my_snakes() const;
 	std::vector<Snake>& my_snakes();
@@ -315,6 +315,7 @@ public:
 	std::vector<Snake>& opponents_snakes();
 
 	const Item& find_item( int item_id ) const;
+	Item& find_item( int item_id );
 	const Snake& find_snake( int snake_id ) const;
 	Snake& find_snake( int snake_id );
 
@@ -387,6 +388,8 @@ inline const std::vector<Snake>& Context::opponents_snakes() const
 inline std::vector<Snake>& Context::opponents_snakes() { return _current_player == 0 ? _snake_list_1 : _snake_list_0; }
 
 inline const Item& Context::find_item( int item_id ) const { return _item_list[item_id]; }
+
+inline Item& Context::find_item( int item_id ) { return _item_list[item_id]; }
 
 inline const Snake& Context::find_snake( int snake_id ) const
 {
@@ -497,7 +500,8 @@ inline bool Context::move_snake( const Operation& op )
 		_snake_map[nx][ny] = snake.id;
 		if ( _item_map[nx][ny] != -1 )
 		{
-			const auto& item = find_item( _item_map[nx][ny] );
+			auto& item = find_item( _item_map[nx][ny] );
+			item.eaten = true;
 			if ( item.type == 0 )
 			{
 				snake.length_bank += item.param;
@@ -802,16 +806,17 @@ inline bool Context::round_preprocess()
 				int item_id = row[j];
 				if ( item_id == -1 )
 					continue;
-				const auto& item = find_item( item_id );
+				auto& item = find_item( item_id );
 				if ( _current_round >= item.time + ITEM_EXPIRE_LIMIT )
 				{
 					row[j] = -1;
+					item.expired = true;
 				}
 			}
 		}
 
 		// spawn new items
-		for ( const auto& item : _item_list )
+		for ( auto& item : _item_list )
 		{
 			if ( item.time == _current_round )
 			{
@@ -822,6 +827,7 @@ inline bool Context::round_preprocess()
 				}
 				else
 				{
+					item.eaten = true;
 					if ( item.type == 0 )
 					{
 						find_snake( snake_id ).length_bank += item.param;
@@ -979,6 +985,8 @@ inline std::vector<Item> SnakeGoAI::read_item_list()
 		item.type = buf[7 * i + 2];
 		item.time = BIG_ENDIAN_INT( buf[7 * i + 3], buf[7 * i + 4] );
 		item.param = BIG_ENDIAN_INT( buf[7 * i + 5], buf[7 * i + 6] );
+		item.eaten = false;
+		item.expired = false;
 	}
 
 	return item_list;
