@@ -174,6 +174,7 @@ class Context:
         self.current_player = 0
         self.auto_growth_round = 8
         self.max_round = config.max_round
+        self.player_operations = [ [], [] ]
 
     def get_map(self) -> Map:
         return self.game_map
@@ -330,6 +331,8 @@ class Controller:
             if s.id == t.id:
                 idx_in_ctx = idx
         assert (idx_in_ctx != -1)
+        snake = self.ctx.snake_list[idx_in_ctx]
+        self.ctx.player_operations[snake.camp].append([self.ctx.turn, snake.id, op])
         if op <= 4:  # move
             return self.move(idx_in_ctx, op - 1)
         elif op == 5:
