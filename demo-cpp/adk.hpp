@@ -617,19 +617,19 @@ inline void Context::seal_region()
 		is_head = false;
 	}
 
-	for ( int i = 0; i < snake.length() - 1; i++ )
+	for ( int i = 0; i < snake.length(); i++ )
 	{
 		// Edge direction
 		int dir1 = 0, dir2 = 0;
 		int ix = snake[i].x, iy = snake[i].y;
-		int jx = snake[i + 1].x, jy = snake[i + 1].y;
+		int jx = snake[( i + 1 ) % snake.length()].x, jy = snake[( i + 1 ) % snake.length()].y;
 		if ( ix == jx )
 		{
 			dir1 = iy > jy ? 2 : 0;
 		}
 		else
 		{
-			dir1 = ix > jx ? 3 : 1;
+			dir1 = ix > jx ? 1 : 3;
 		}
 		dir2 = ( dir1 + 2 ) % 4;
 
