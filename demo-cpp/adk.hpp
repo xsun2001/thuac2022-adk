@@ -321,8 +321,6 @@ public:
 	const Snake& find_snake( int snake_id ) const;
 	Snake& find_snake( int snake_id );
 
-	const std::vector<std::vector<Operation>>& operation_history() const;
-
 private:
 	PROPERTY( int, length );
 	PROPERTY( int, width );
@@ -343,15 +341,14 @@ private:
 	int _current_snake_id, _next_snake_id;
 	std::vector<int> _new_snakes;
 	std::vector<int> _remove_snakes;
-	std::vector<std::vector<Operation>> _operation_history;
 
 	// Helper functions
 	Snake& current_snake();
 	bool move_snake( const Operation& op );
 
 	void remove_snake( int snake_id );
-	void flood_fill( TwoDimArray<int>& map, int x, int y, int v );
-	void check_dir( TwoDimArray<int>& map, bool dir_ok[], int x, int y );
+	void flood_fill( TwoDimArray<int>& map, int x, int y, int v ) const;
+	static void check_dir( TwoDimArray<int>& map, bool dir_ok[], int x, int y );
 	void seal_region();
 
 	bool fire_railgun();
@@ -366,7 +363,7 @@ inline Context::Context( int length, int width, int max_round, std::vector<Item>
 	  _snake_map { static_cast<size_t>( length ), static_cast<size_t>( width ), -1 },
 	  _item_map { static_cast<size_t>( length ), static_cast<size_t>( width ), -1 },
 	  _item_list( item_list ), _snake_list_0 {}, _snake_list_1 {}, _tmp_list_0 {}, _tmp_list_1 {},
-	  _current_snake_id( 0 ), _next_snake_id( 2 ), _new_snakes {}, _remove_snakes {}, _operation_history {}
+	  _current_snake_id( 0 ), _next_snake_id( 2 ), _new_snakes {}, _remove_snakes {}
 {
 	Snake s = { { { 0, width - 1 } }, 0, 0, 0, NOT_A_ITEM };
 	_snake_list_0.push_back( s );
@@ -424,17 +421,8 @@ inline Snake& Context::find_snake( int snake_id )
 						  [=]( const Snake& other ) { return other.id == snake_id; } );
 }
 
-inline const std::vector<std::vector<Operation>>& Context::operation_history() const { return _operation_history; }
-
 inline bool Context::do_operation( const Operation& op )
 {
-	int op_history_idx = 2 * ( _current_round - 1 ) + _current_player;
-	while ( _operation_history.size() <= op_history_idx )
-	{
-		_operation_history.emplace_back();
-	}
-	_operation_history[op_history_idx].push_back( op );
-
 	if ( op.type == 5 )
 	{
 		if ( !fire_railgun() )
@@ -571,7 +559,7 @@ inline void Context::remove_snake( int snake_id )
 	}
 }
 
-inline void Context::flood_fill( TwoDimArray<int>& map, int x, int y, int v )
+inline void Context::flood_fill( TwoDimArray<int>& map, int x, int y, int v ) const
 {
 	std::queue<Coord> q;
 	q.push( { x, y } );
@@ -619,7 +607,7 @@ inline void Context::seal_region()
 	for ( int i = 0; i < snake.length(); i++ )
 	{
 		// Edge direction
-		int dir1 = 0, dir2 = 0;
+		int dir1, dir2;
 		int ix = snake[i].x, iy = snake[i].y;
 		int jx = snake[( i + 1 ) % snake.length()].x, jy = snake[( i + 1 ) % snake.length()].y;
 		if ( ix == jx )
@@ -847,7 +835,9 @@ inline bool Context::round_preprocess()
 
 /*   AI-defined Interface Begins   */
 
-Operation make_your_decision( const Snake& snake_to_operate, const Context& ctx );
+using OpHistory = std::vector<std::vector<Operation>>;
+
+Operation make_your_decision( const Snake& snake_to_operate, const Context& ctx, const OpHistory& op_history );
 
 void game_over( int gameover_type, int winner, int p0_score, int p1_score );
 
@@ -864,16 +854,18 @@ public:
 private:
 	Channel* ch;
 	Context* ctx;
+	OpHistory op_history;
 
 	int read_short();
 	int read_int();
 	std::vector<Item> read_item_list();
+	void append_op( Operation op );
 	[[noreturn]] void handle_gameover();
 
-	void crash();
+	static void crash();
 };
 
-inline SnakeGoAI::SnakeGoAI( int argc, char** argv )
+inline SnakeGoAI::SnakeGoAI( int argc, char** argv ) : ch( nullptr ), ctx( nullptr ), op_history {}
 {
 	if ( argc == 1 )
 	{
@@ -896,7 +888,8 @@ inline SnakeGoAI::SnakeGoAI( int argc, char** argv )
 	{
 		if ( player == ctx->_current_player )
 		{
-			Operation op = make_your_decision( ctx->current_snake(), *ctx );
+			Operation op = make_your_decision( ctx->current_snake(), *ctx, op_history );
+			append_op( op );
 			ctx->do_operation( op );
 			char msg[] = { 0, 0, 0, 1, (char) op.type };
 			bool send_ok = ch->send( msg, 5 );
@@ -916,6 +909,7 @@ inline SnakeGoAI::SnakeGoAI( int argc, char** argv )
 			if ( type >= 1 && type <= 6 )
 			{
 				Operation op { type };
+				append_op( op );
 				ctx->do_operation( op );
 			}
 			else if ( type == 0x11 )
@@ -982,6 +976,16 @@ inline std::vector<Item> SnakeGoAI::read_item_list()
 	}
 
 	return item_list;
+}
+
+void SnakeGoAI::append_op( Operation op )
+{
+	int op_history_idx = 2 * ( ctx->_current_round - 1 ) + ctx->_current_player;
+	while ( op_history.size() <= op_history_idx )
+	{
+		op_history.emplace_back();
+	}
+	op_history[op_history_idx].push_back( op );
 }
 
 inline void SnakeGoAI::handle_gameover()

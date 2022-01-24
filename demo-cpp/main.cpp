@@ -1,8 +1,7 @@
 #include "adk.hpp"
 #include <cmath>
 
-Operation
-make_your_decision( const Snake &snake_to_operate, const Context &ctx )
+Operation make_your_decision( const Snake& snake_to_operate, const Context& ctx, const OpHistory& op_list )
 {
 	//若该蛇有道具，执行融化射线操作
 	if ( snake_to_operate.railgun_item.id != -1 )
@@ -50,17 +49,16 @@ make_your_decision( const Snake &snake_to_operate, const Context &ctx )
 		}
 
 		//撞非本蛇
-		if ( ctx.snake_map()[t_x][t_y] != -1 &&
-			 ctx.snake_map()[t_x][t_y] != snake_to_operate.id )
+		if ( ctx.snake_map()[t_x][t_y] != -1 && ctx.snake_map()[t_x][t_y] != snake_to_operate.id )
 		{
 			move[dir] = -1;
 			continue;
 		}
 
 		//回头撞自己
-		if ( ( snake_to_operate.length() > 2 || ( snake_to_operate.length() == 2 && snake_to_operate.length_bank > 0 ) ) &&
-			 snake_to_operate[1].x == t_x &&
-			 snake_to_operate[1].y == t_y )
+		if ( ( snake_to_operate.length() > 2 ||
+			   ( snake_to_operate.length() == 2 && snake_to_operate.length_bank > 0 ) ) &&
+			 snake_to_operate[1].x == t_x && snake_to_operate[1].y == t_y )
 		{
 			move[dir] = -1;
 			continue;
@@ -129,8 +127,8 @@ make_your_decision( const Snake &snake_to_operate, const Context &ctx )
 			//朝向蛇尾方向移动
 			int t_x = snake_to_operate.coord_list[0].x + dx[dir];
 			int t_y = snake_to_operate.coord_list[0].y + dy[dir];
-			int dis = abs( snake_to_operate.coord_list.back().x - t_x ) +
-					  abs( snake_to_operate.coord_list.back().y - t_y );
+			int dis =
+				abs( snake_to_operate.coord_list.back().x - t_x ) + abs( snake_to_operate.coord_list.back().y - t_y );
 			if ( dis <= distance )
 			{
 				return direction[dir];
@@ -155,8 +153,8 @@ make_your_decision( const Snake &snake_to_operate, const Context &ctx )
 		}
 	}
 	if ( ( snake_to_operate.length() > 2 || ( snake_to_operate.length() == 2 && snake_to_operate.length_bank > 0 ) ) &&
-		snake_to_operate[1].x == snake_to_operate[0].x + dx[0] &&
-		snake_to_operate[1].y == snake_to_operate[0].y + dy[0] ) 
+		 snake_to_operate[1].x == snake_to_operate[0].x + dx[0] &&
+		 snake_to_operate[1].y == snake_to_operate[0].y + dy[0] )
 		return OP_LEFT;
 	else
 		return OP_RIGHT;
@@ -167,7 +165,4 @@ void game_over( int gameover_type, int winner, int p0_score, int p1_score )
 	fprintf( stderr, "%d %d %d %d", gameover_type, winner, p0_score, p1_score );
 }
 
-int main( int argc, char **argv )
-{
-	SnakeGoAI start( argc, argv );
-}
+int main( int argc, char** argv ) { SnakeGoAI start( argc, argv ); }
