@@ -226,10 +226,10 @@ public:
 		std::fill( data, data + length * width, init_val );
 	}
 	~TwoDimArray() { delete[] data; }
-	TwoDimArray( const TwoDimArray& other )
+	TwoDimArray( const TwoDimArray<T>& other )
 		: length( other.length ), width( other.width ), data( new T[length * width] )
 	{
-		std::copy( std::begin( other.data ), std::end( other.data ), std::begin( data ) );
+		std::copy( other.data, other.data + ( length * width ), data );
 	}
 	TwoDimArray( TwoDimArray&& other ) = delete;
 
@@ -365,8 +365,8 @@ inline Context::Context( int length, int width, int max_round, std::vector<Item>
 	  _current_player( 1 ), _wall_map { static_cast<size_t>( length ), static_cast<size_t>( width ), -1 },
 	  _snake_map { static_cast<size_t>( length ), static_cast<size_t>( width ), -1 },
 	  _item_map { static_cast<size_t>( length ), static_cast<size_t>( width ), -1 },
-	  _item_list( item_list ), _snake_list_0 {}, _snake_list_1 {}, _tmp_list_0 {}, _tmp_list_1 {}, _current_snake_id( 0 ),
-	  _next_snake_id( 2 ), _new_snakes {}, _remove_snakes {}, _operation_history {}
+	  _item_list( item_list ), _snake_list_0 {}, _snake_list_1 {}, _tmp_list_0 {}, _tmp_list_1 {},
+	  _current_snake_id( 0 ), _next_snake_id( 2 ), _new_snakes {}, _remove_snakes {}, _operation_history {}
 {
 	Snake s = { { { 0, width - 1 } }, 0, 0, 0, NOT_A_ITEM };
 	_snake_list_0.push_back( s );
@@ -379,7 +379,6 @@ inline Context::Context( int length, int width, int max_round, std::vector<Item>
 
 	round_preprocess();
 }
-
 inline const std::vector<Snake>& Context::my_snakes() const
 {
 	return _current_player == 0 ? _snake_list_0 : _snake_list_1;
@@ -389,7 +388,7 @@ inline std::vector<Snake>& Context::my_snakes() { return _current_player == 0 ? 
 
 inline const std::vector<int>& Context::tmp_my_snakes() const
 {
-    return _current_player == 0 ? _tmp_list_0 : _tmp_list_1;
+	return _current_player == 0 ? _tmp_list_0 : _tmp_list_1;
 }
 
 inline std::vector<int>& Context::tmp_my_snakes() { return _current_player == 0 ? _tmp_list_0 : _tmp_list_1; }
@@ -752,7 +751,7 @@ inline bool Context::find_next_snake()
 	if ( opponents_snakes().empty() )
 	{
 		if ( !my_snakes().empty() )
-		    _current_snake_id = my_snakes()[0].id;
+			_current_snake_id = my_snakes()[0].id;
 	}
 	else
 	{
@@ -832,11 +831,11 @@ inline bool Context::round_preprocess()
 
 	_tmp_list_0.clear();
 	for ( const auto& s : _snake_list_0 )
-	    _tmp_list_0.push_back(s.id);
+		_tmp_list_0.push_back( s.id );
 
 	_tmp_list_1.clear();
 	for ( const auto& s : _snake_list_1 )
-	    _tmp_list_1.push_back(s.id);
+		_tmp_list_1.push_back( s.id );
 
 	if ( my_snakes().empty() )
 		_current_player = 1 - _current_player;
