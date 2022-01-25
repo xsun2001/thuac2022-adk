@@ -202,6 +202,7 @@ class Context:
     def get_player_snake(self, camp: int):
         return [snake for snake in self.snake_list if snake.camp == camp]
 
+
 class Graph:
     dx = [1, 0, -1, 0]
     dy = [0, 1, 0, -1]
@@ -211,6 +212,7 @@ class Graph:
         self.l = l
         self.w = w
         self.bound = bound
+        self.inner = [True, True, True]
         for x, y in bound:
             self.table[x][y] = -1
 
@@ -222,14 +224,6 @@ class Graph:
         if x == 0:
             return y + 2
 
-    def check(self, c):
-        for i in range(self.l):
-            for j in range(self.w):
-                if self.table[i][j] == c:
-                    if i == 0 or j == 0 or i == self.l - 1 or j == self.w - 1:
-                        return False
-        return True
-
     def calc(self):
         for i in range(len(self.bound)):
             dir = self.convert_dir(self.bound[i], self.bound[i - 1])
@@ -239,7 +233,7 @@ class Graph:
             self.floodfill(self.bound[i][0] + self.dx[dir2], self.bound[i][1] + self.dy[dir2], 2)
         ret = []
         for k in range(1, 3):
-            if self.check(k):
+            if self.inner[k]:
                 for i in range(self.l):
                     for j in range(self.w):
                         if self.table[i][j] == k:
@@ -250,18 +244,15 @@ class Graph:
         return 0 <= x < self.l and 0 <= y < self.w
 
     def floodfill(self, x, y, c):
-        if (not self.valid(x, y)) or (self.table[x][y] != 0):
+        if not self.valid(x, y):
+            self.inner[c] = False
+            return
+        if self.table[x][y] != 0:
             return
         self.table[x][y] = c
-        self.dfs(x, y, c)
-
-    def dfs(self, x, y, c):
         for i in range(4):
             tx, ty = x + self.dx[i], y + self.dy[i]
-            if self.valid(tx, ty) and self.table[tx][ty] == 0:
-                self.table[tx][ty] = c
-                self.dfs(tx, ty, c)
-
+            self.floodfill(tx, ty, c)
 
 
 class Controller:
