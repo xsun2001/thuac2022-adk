@@ -347,8 +347,7 @@ private:
 	bool move_snake( const Operation& op );
 
 	void remove_snake( int snake_id );
-	void flood_fill( TwoDimArray<int>& map, int x, int y, int v ) const;
-	static void check_dir( TwoDimArray<int>& map, bool dir_ok[], int x, int y );
+	void flood_fill( TwoDimArray<int>& map, int x, int y, int v, bool dir_ok[]) const;
 	void seal_region();
 
 	bool fire_railgun();
@@ -559,7 +558,7 @@ inline void Context::remove_snake( int snake_id )
 	}
 }
 
-inline void Context::flood_fill( TwoDimArray<int>& map, int x, int y, int v ) const
+inline void Context::flood_fill( TwoDimArray<int>& map, int x, int y, int v, bool dir_ok[]) const
 {
 	std::queue<Coord> q;
 	q.push( { x, y } );
@@ -568,8 +567,13 @@ inline void Context::flood_fill( TwoDimArray<int>& map, int x, int y, int v ) co
 		auto c = q.front();
 		q.pop();
 		int cx = c.x, cy = c.y;
-		if ( cx < 0 || cx >= _length || cy < 0 || cy >= _width || map[cx][cy] != 0 )
-			continue;
+		if ( cx < 0 || cx >= _length || cy < 0 || cy >= _width)
+		{
+		    dir_ok[v] = false;
+		    continue;
+		}
+		if (map[cx][cy] != 0)
+		    continue;
 		map[cx][cy] = v;
 		q.push( { cx + 1, cy } );
 		q.push( { cx - 1, cy } );
@@ -578,13 +582,6 @@ inline void Context::flood_fill( TwoDimArray<int>& map, int x, int y, int v ) co
 	}
 }
 
-inline void Context::check_dir( TwoDimArray<int>& map, bool* dir_ok, int x, int y )
-{
-	if ( map[x][y] == 1 )
-		dir_ok[1] = false;
-	else if ( map[x][y] == 2 )
-		dir_ok[2] = false;
-}
 
 inline void Context::seal_region()
 {
@@ -596,46 +593,37 @@ inline void Context::seal_region()
 	// Mark bounder
 	int x0 = snake[0].x, y0 = snake[0].y;
 	bool is_head = true;
+	int len = 0;
 	for ( auto c : snake.coord_list )
 	{
 		if ( x0 == c.x && y0 == c.y && !is_head )
 			break;
 		grid[c.x][c.y] = 3;
 		is_head = false;
+		len++;
 	}
 
-	for ( int i = 0; i < snake.length(); i++ )
-	{
-		// Edge direction
-		int dir1, dir2;
-		int ix = snake[i].x, iy = snake[i].y;
-		int jx = snake[( i + 1 ) % snake.length()].x, jy = snake[( i + 1 ) % snake.length()].y;
-		if ( ix == jx )
-		{
-			dir1 = iy > jy ? 2 : 0;
-		}
-		else
-		{
-			dir1 = ix > jx ? 1 : 3;
-		}
-		dir2 = ( dir1 + 2 ) % 4;
-
-		// BFS
-		flood_fill( grid, ix + dx[dir1], iy + dy[dir1], 1 );
-		flood_fill( grid, ix + dx[dir2], iy + dy[dir2], 2 );
-	}
-
-	// Check inner kind
 	bool dir_ok[] = { false, true, true, true };
-	for ( int i = 0; i < _length; i++ )
+
+	for ( int i = 0; i < len; i++ )
 	{
-		check_dir( grid, dir_ok, i, 0 );
-		check_dir( grid, dir_ok, i, _width - 1 );
-	}
-	for ( int i = 0; i < _width; i++ )
-	{
-		check_dir( grid, dir_ok, 0, i );
-		check_dir( grid, dir_ok, _length - 1, i );
+	    // Edge direction
+	    int dir1, dir2;
+	    int ix = snake[i].x, iy = snake[i].y;
+	    int jx = snake[( i + 1 ) % len].x, jy = snake[( i + 1 ) % len].y;
+	    if ( ix == jx )
+	    {
+	        dir1 = iy > jy ? 2 : 0;
+	    }
+	    else
+	    {
+	        dir1 = ix > jx ? 1 : 3;
+	    }
+	    dir2 = ( dir1 + 2 ) % 4;
+
+	    // BFS
+	    flood_fill( grid, ix + dx[dir1], iy + dy[dir1], 1, dir_ok);
+	    flood_fill( grid, ix + dx[dir2], iy + dy[dir2], 2, dir_ok);
 	}
 
 	// Fill wall map
