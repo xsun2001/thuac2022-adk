@@ -844,8 +844,8 @@ private:
 	Context* ctx;
 	OpHistory op_history;
 
+	int read_byte();
 	int read_short();
-	int read_int();
 	std::vector<Item> read_item_list();
 	void append_op( Operation op );
 	[[noreturn]] void handle_gameover();
@@ -869,7 +869,7 @@ inline SnakeGoAI::SnakeGoAI( int argc, char** argv ) : ch( nullptr ), ctx( nullp
 		crash();
 	}
 
-	int length = read_short(), width = read_short(), max_round = read_int(), player = read_short();
+	int length = read_byte(), width = read_byte(), max_round = read_short(), player = read_byte();
 	ctx = new Context( length, width, max_round, std::move( read_item_list() ) );
 
 	while ( true )
@@ -881,7 +881,7 @@ inline SnakeGoAI::SnakeGoAI( int argc, char** argv ) : ch( nullptr ), ctx( nullp
 			ctx->do_operation( op );
 			char msg[] = { 0, 0, 0, 1, (char) op.type };
 			bool send_ok = ch->send( msg, 5 );
-			int ack_type = read_short();
+			int ack_type = read_byte();
 			if ( ack_type == 0x11 )
 			{
 				handle_gameover();
@@ -893,7 +893,7 @@ inline SnakeGoAI::SnakeGoAI( int argc, char** argv ) : ch( nullptr ), ctx( nullp
 		}
 		else
 		{
-			int type = read_short();
+			int type = read_byte();
 			if ( type >= 1 && type <= 6 )
 			{
 				Operation op { type };
@@ -918,7 +918,7 @@ inline SnakeGoAI::~SnakeGoAI()
 	delete ctx;
 }
 
-inline int SnakeGoAI::read_short()
+inline int SnakeGoAI::read_byte()
 {
 	static char c = 0;
 	if ( !ch->recv( &c, 1 ) )
@@ -929,7 +929,7 @@ inline int SnakeGoAI::read_short()
 #define BIG_ENDIAN_INT( C1, C2 ) \
 	( ( ( static_cast<unsigned char>( C1 ) << 8 ) | ( static_cast<unsigned char>( C2 ) ) ) & 0xFFFF )
 
-inline int SnakeGoAI::read_int()
+inline int SnakeGoAI::read_short()
 {
 	static char c[] = { 0, 0 };
 	if ( !ch->recv( c, 2 ) )
@@ -939,10 +939,10 @@ inline int SnakeGoAI::read_int()
 
 inline std::vector<Item> SnakeGoAI::read_item_list()
 {
-	if ( read_short() != 0x10 )
+	if ( read_byte() != 0x10 )
 		crash();
 
-	int item_count = read_int();
+	int item_count = read_short();
 	if ( item_count <= 0 )
 		crash();
 	char* buf = new char[7 * item_count];
@@ -979,7 +979,7 @@ void SnakeGoAI::append_op( Operation op )
 inline void SnakeGoAI::handle_gameover()
 {
 	static char dummy[] = { 0, 0, 0, 1, 1 };
-	int gameover_type = read_short(), winner = read_short(), p0_score = read_int(), p1_score = read_int();
+	int gameover_type = read_byte(), winner = read_byte(), p0_score = read_short(), p1_score = read_short();
 	game_over( gameover_type, winner, p0_score, p1_score );
 
 	for ( ;; )
