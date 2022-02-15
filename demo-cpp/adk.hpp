@@ -878,7 +878,7 @@ inline SnakeGoAI::SnakeGoAI( int argc, char** argv ) : ch( nullptr ), ctx( nullp
 		{
 			Operation op = make_your_decision( ctx->current_snake(), *ctx, op_history );
 			append_op( op );
-			ctx->do_operation( op );
+			bool running = ctx->do_operation( op );
 			char msg[] = { 0, 0, 0, 1, (char) op.type };
 			bool send_ok = ch->send( msg, 5 );
 			int ack_type = read_short();
@@ -890,6 +890,14 @@ inline SnakeGoAI::SnakeGoAI( int argc, char** argv ) : ch( nullptr ), ctx( nullp
 			{
 				crash();
 			}
+			if ( !running )
+            {
+                int flag = read_short();
+                if ( flag == 0x11 )
+                    handle_gameover();
+                else
+                    crash();
+            }
 		}
 		else
 		{
@@ -898,7 +906,15 @@ inline SnakeGoAI::SnakeGoAI( int argc, char** argv ) : ch( nullptr ), ctx( nullp
 			{
 				Operation op { type };
 				append_op( op );
-				ctx->do_operation( op );
+				bool running = ctx->do_operation( op );
+				if ( !running )
+				{
+				    int flag = read_short();
+				    if ( flag == 0x11 )
+				        handle_gameover();
+				    else
+				        crash();
+				}
 			}
 			else if ( type == 0x11 )
 			{
