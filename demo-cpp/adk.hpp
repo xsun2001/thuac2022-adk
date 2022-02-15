@@ -908,13 +908,13 @@ inline SnakeGoAI::SnakeGoAI( int argc, char** argv ) : ch( nullptr ), ctx( nullp
 				append_op( op );
 				bool running = ctx->do_operation( op );
 				if ( !running )
-				{
-				    int flag = read_byte();
-				    if ( flag == 0x11 )
-				        handle_gameover();
-				    else
-				        crash();
-				}
+                {
+                    int flag = read_byte();
+                    if ( flag == 0x11 )
+                        handle_gameover();
+                    else
+                        crash();
+                }
 			}
 			else if ( type == 0x11 )
 			{
